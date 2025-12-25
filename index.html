@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>메리나 크리스마스 플레이어 v.1.4</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<style>
+body {
+  margin: 0;
+  padding: 20px;
+  background: #0e0e0e;
+  color: #eee;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.container {
+  max-width: 960px;
+  margin: auto;
+}
+
+/* ✨ Neon */
+.neon-youtube {
+  display: block;
+  text-align: center;
+  margin-bottom: 18px;
+  font-family: "Pacifico", cursive;
+  font-size: clamp(26px, 5vw, 38px);
+  color: #ffb7d5;
+  text-decoration: none;
+  opacity: 0.25;
+  transition: all 0.4s ease;
+}
+
+.neon-youtube.on {
+  opacity: 1;
+  text-shadow:
+    0 0 4px #ff8ccf,
+    0 0 10px #ff4fa3,
+    0 0 20px #ff4fa3,
+    0 0 40px rgba(255,79,163,0.9);
+}
+
+/* 📺 TV */
+.tv {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.tv-frame {
+  width: 100%;
+  background: linear-gradient(145deg, #5a2f1a, #3b1f12);
+  padding: 20px;
+  border-radius: 22px;
+}
+
+.tv-screen {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: black;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Guide */
+.guide-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.88);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+
+.guide-overlay img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 12px;
+}
+
+/* Info */
+.now-playing {
+  font-size: 0.95em;
+  color: #bbb;
+  margin: 10px 4px;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+button {
+  background: #1f1f1f;
+  color: #eee;
+  border: none;
+  padding: 11px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button.active {
+  background: #444;
+}
+
+.info-btn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 18px;
+}
+
+/* Playlist */
+.playlist-wrap {
+  max-height: 45vh;
+  overflow-y: auto;
+}
+
+.track {
+  padding: 14px;
+  background: #161616;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.track.active { background: #3a3a3a; }
+
+.track span {
+  font-size: 0.8em;
+  color: #aaa;
+}
+
+/* Footer */
+.presented-by {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 0.75em;
+  color: #666;
+}
+.presented-by a {
+  color: #888;
+  text-decoration: none;
+}
+.presented-by a:hover {
+  color: #ffb7d5;
+}
+
+/* ===================== */
+/* Tabs (추가) */
+/* ===================== */
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.tab {
+  background: #1f1f1f;
+  color: #aaa;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: #ffb7d5;
+  color: #000;
+}
+
+.player-tab {
+  display: none;
+}
+
+.player-tab.active {
+  display: block;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<a class="neon-youtube"
+   href="https://www.youtube.com/@lenaparklive"
+   target="_blank">▶ @lenaparklive</a>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('a')">🎄 Christmas</button>
+  <button class="tab" onclick="switchTab('b')">🎧 Other</button>
+</div>
+
+<div class="tv">
+
+  <!-- Player A (기존) -->
+  <div class="tv-frame player-tab active" id="tab-a">
+    <div class="tv-screen">
+      <div id="player"></div>
+      <div id="guideOverlay" class="guide-overlay" onclick="hideGuide()">
+        <img src="guide.jpg" alt="플레이어 안내">
+      </div>
+    </div>
+  </div>
+
+  <!-- Player B (추가) -->
+  <div class="tv-frame player-tab" id="tab-b">
+    <div class="tv-screen">
+      <div id="playerB"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="now-playing" id="nowPlaying">Now Playing: —</div>
+
+<div class="controls">
+  <button onclick="prevTrack()">◀ Prev</button>
+  <button onclick="nextTrack()">Next ▶</button>
+  <button id="shuffleBtn" onclick="toggleShuffle()">Shuffle</button>
+  <button id="repeatBtn" onclick="toggleRepeat()">Repeat: OFF</button>
+  <button class="info-btn" onclick="showGuide()">ℹ️</button>
+</div>
+
+<div class="playlist-wrap" id="playlist"></div>
+
+<div class="presented-by">
+ⓒ <a href="https://blog.naver.com/readingstraws" target="_blank">박정현북클럽</a>
+</div>
+
+</div>
+
+<script>
+/* ===================== */
+/* Player A tracks (원본 그대로) */
+/* ===================== */
+const tracks = [
+  { title:"White Christmas (Jazz Ver.)", note:"박정현", videoId:"f5V0PpyTXNI", start:95 },
+  { title:"Santa Tell Me", note:"박정현", videoId:"UDJJnVyUvmA", start:149, end:365},
+  { title:"싱숭생숭", note:"박정현 & 다이나믹 듀오", videoId:"C_zfF1xdYHQ", start:0, end:266 },
+  { title:"It's a New Christmas", note:"015B with 박정현 at 두시탈출 컬투쇼(2025.12.23)", videoId:"cm_TMy6ghYg", start:0, end:194 },
+  { title:"All I Want for Christmas Is You", note:"박정현 at 한중가요제(2010.12.12)", videoId:"K04wfBmxB28", start:5 },
+  { title:"Winter Kiss (MV)", note:"박정현 (feat. 백찬)", videoId:"Y-C9dZiWJaM", start:0 },
+  { title:"Let It Snow", note:"박정현 at BMW 연말 콘서트((2022.12.17))", videoId:"rJ0uQ4bZ0WY", start:0 },
+  { title:"Last Christmas", note:"박정현 & 다이나믹 듀오 at 쇼!뮤직탱크(2007.12.25)", videoId:"mLeMqtAa1PQ", start:0, end:267 },
+  { title:"Santa Claus Is Coming to Town", note:"박정현 at Play! (2024.12.20)", videoId:"bdl5L0hYRtM", start:568, end:724 },
+  { title:"하얀겨울 (MV)", note:"박정현 & 김범수", videoId:"er1RYWQf0Gc", start:0 },
+  { title:"The First Noel", note:"박정현 at 뮤직캠프 (2002.12.21)", videoId:"sgutlOIsYb0", start:0 },
+  { title:"I'll Be Home for Christmas", note:"박정현 at 별이 빛나는 밤에(2007.12.14)", videoId:"xiaUUFPLdc0", start:0, end:240},
+  { title:"Have Yourself a Merry Little Christmas", note:"박정현 at BMW 연말 콘서트(2022.12.17)", videoId:"rrK7QmfnJ1o", start:0}
+];
+
+/* ===================== */
+/* Player B tracks (추가) */
+/* ===================== */
+const tracksB = [
+  {
+    title: "노래할게요 (Serenade) – 다시 겨울이야",
+    note: "박정현",
+    videoId: "JTU3MAD41_8",
+    start: 186
+  }
+];
+
+let player;
+let playerB;
+let currentIndex = 0;
+let shuffle = false;
+let repeatMode = "off";
+let endCheckInterval = null;
+
+const playlistEl = document.getElementById("playlist");
+const nowPlaying = document.getElementById("nowPlaying");
+const shuffleBtn = document.getElementById("shuffleBtn");
+const repeatBtn = document.getElementById("repeatBtn");
+const neon = document.querySelector(".neon-youtube");
+
+function neonFlash() {
+  neon.classList.remove("on");
+  void neon.offsetWidth;
+  neon.classList.add("on");
+}
+
+function onYouTubeIframeAPIReady() {
+  player = new YT.Player("player", {
+    videoId: tracks[0].videoId,
+    events: {
+      onReady: () => playTrack(0),
+      onStateChange: onPlayerStateChange
+    }
+  });
+
+  playerB = new YT.Player("playerB", {
+    videoId: tracksB[0].videoId,
+    events: {
+      onReady: () => {
+        playerB.loadVideoById({
+          videoId: tracksB[0].videoId,
+          startSeconds: tracksB[0].start || 0
+        });
+        playerB.pauseVideo();
+      }
+    }
+  });
+}
+
+function onPlayerStateChange(e) {
+  if (e.data === YT.PlayerState.ENDED) {
+    if (repeatMode === "one") {
+      playTrack(currentIndex);
+    } else {
+      nextTrack();
+    }
+  }
+}
+
+function playTrack(i) {
+  clearInterval(endCheckInterval);
+  currentIndex = i;
+  const t = tracks[i];
+
+  player.loadVideoById({
+    videoId: t.videoId,
+    startSeconds: t.start || 0
+  });
+
+  if (t.end) {
+    endCheckInterval = setInterval(() => {
+      if (player.getCurrentTime() >= t.end) {
+        clearInterval(endCheckInterval);
+        if (repeatMode === "one") {
+          playTrack(currentIndex);
+        } else {
+          nextTrack();
+        }
+      }
+    }, 300);
+  }
+
+  nowPlaying.textContent = "Now Playing: " + t.title;
+  neonFlash();
+  updateActive();
+}
+
+function nextTrack() {
+  if (shuffle) {
+    let n;
+    do { n = Math.floor(Math.random() * tracks.length); }
+    while (n === currentIndex && tracks.length > 1);
+    currentIndex = n;
+  } else {
+    currentIndex = (currentIndex + 1) % tracks.length;
+  }
+  playTrack(currentIndex);
+}
+
+function prevTrack() {
+  currentIndex = (currentIndex - 1 + tracks.length) % tracks.length;
+  playTrack(currentIndex);
+}
+
+function toggleShuffle() {
+  shuffle = !shuffle;
+  shuffleBtn.classList.toggle("active", shuffle);
+}
+
+function toggleRepeat() {
+  repeatMode = repeatMode === "off" ? "one" : repeatMode === "one" ? "all" : "off";
+  repeatBtn.textContent = "Repeat: " + repeatMode.toUpperCase();
+  repeatBtn.classList.toggle("active", repeatMode !== "off");
+}
+
+function loadPlaylist() {
+  tracks.forEach((t,i)=>{
+    const d = document.createElement("div");
+    d.className = "track";
+    d.innerHTML = `<strong>${t.title}</strong><br><span>${t.note}</span>`;
+    d.onclick = () => playTrack(i);
+    playlistEl.appendChild(d);
+  });
+}
+
+function updateActive() {
+  document.querySelectorAll(".track").forEach((el,i)=>{
+    el.classList.toggle("active", i === currentIndex);
+  });
+}
+
+function showGuide() {
+  document.getElementById("guideOverlay").style.display = "flex";
+}
+function hideGuide() {
+  document.getElementById("guideOverlay").style.display = "none";
+}
+
+/* ===================== */
+/* Tabs logic (추가) */
+/* ===================== */
+function switchTab(tab) {
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".player-tab").forEach(p=>p.classList.remove("active"));
+
+  if (tab === "a") {
+    document.getElementById("tab-a").classList.add("active");
+    document.querySelector(".tab:nth-child(1)").classList.add("active");
+    if (playerB) playerB.pauseVideo();
+  } else {
+    document.getElementById("tab-b").classList.add("active");
+    document.querySelector(".tab:nth-child(2)").classList.add("active");
+    if (player) player.pauseVideo();
+  }
+}
+
+loadPlaylist();
+</script>
+</body>
+</html>
