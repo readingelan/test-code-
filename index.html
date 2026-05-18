@@ -1,263 +1,595 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>메리나 크리스마스 플레이어 v.1.4</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Odyssey Voyage - 3D Book Cover Edition</title>
+  
+  <style>
+    /* ========================================================
+       🎨 글로벌 레이아웃 및 뷰포트 격리 고정
+       ======================================================== */
+    * { 
+      box-sizing: border-box; 
+      margin: 0;
+      padding: 0;
+    }
+    
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden; 
+      background: #050b12; 
+      font-family: Georgia, serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
-<script src="https://www.youtube.com/iframe_api"></script>
+    /* 스마트폰 목업 컨테이너 */
+    .app {
+      width: 100%;
+      height: 100vh;
+      height: -webkit-fill-available; 
+      max-width: 480px; 
+      background: #08111d;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden; 
+      position: relative;
+      box-shadow: 0 0 40px rgba(0,0,0,0.8);
+    }
 
-<style>
-body {
-  margin: 0;
-  padding: 20px;
-  background: #0e0e0e;
-  color: #eee;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-}
+    /* ========================================================
+       📖 3D 책 표지 인트로 레이어 (CSS 3D 애니메이션)
+       ======================================================== */
+    .intro-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #0b1420; /* 책이 열릴 때 보일 안쪽 배경 */
+      z-index: 999; /* 모든 요소의 최상단에 배치 */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      /* 3D 원근감 설정 (값이 작을수록 입체감이 왜곡되면서 강해집니다) */
+      perspective: 1200px; 
+      transition: opacity 0.5s ease, visibility 0.5s;
+    }
 
-.container { max-width: 960px; margin: auto; }
+    /* 표지가 다 열린 후 전체 인트로 틀을 숨기기 위한 클래스 */
+    .intro-layer.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
 
-/* ===== Neon ===== */
-.neon-youtube {
-  display: block;
-  text-align: center;
-  margin-bottom: 12px;
-  font-family: "Pacifico", cursive;
-  font-size: clamp(26px, 5vw, 38px);
-  color: #ffb7d5;
-  text-decoration: none;
-  opacity: 0.25;
-  transition: all 0.4s ease;
-}
-.neon-youtube.on {
-  opacity: 1;
-  text-shadow:
-    0 0 4px #ff8ccf,
-    0 0 10px #ff4fa3,
-    0 0 20px #ff4fa3,
-    0 0 40px rgba(255,79,163,0.9);
-}
+    /* 실제 3D 회전 효과가 일어나는 북 커버 몸통 */
+    .book-cover {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #2b1704, #4a2b11); /* 고급 가죽 양장본 톤 */
+      border: 5px double #ae8c57; /* 엔틱한 금박 테두리 라인 */
+      border-radius: 4px 12px 12px 4px;
+      position: relative;
+      cursor: pointer;
+      box-shadow: 10px 10px 25px rgba(0,0,0,0.6);
+      
+      /* 회전축을 책의 왼쪽 테두리로 고정 */
+      transform-origin: left center;
+      /* 부드러운 하드커버 회전 애니메이션 속도 정의 */
+      transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+    }
 
-/* ===== TV ===== */
-.tv {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 0;
-}
-.tv-frame {
-  width: 100%;
-  background: linear-gradient(145deg, #5a2f1a, #3b1f12);
-  padding: 20px;
-  border-radius: 22px 22px 12px 12px;
-}
-.tv-screen {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background: black;
-  border-radius: 14px;
-  overflow: hidden;
-}
-iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
-}
+    /* 자바스크립트로 클릭 감시 후 이 클래스를 붙여 3D 회전을 트리거합니다 */
+    .book-cover.open {
+      transform: rotateY(-130deg); /* 왼쪽으로 입체감 있게 활짝 열림 */
+    }
 
-/* ===== Tabs (TV 아래에 붙은 느낌) ===== */
-.tabs {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  margin-top: -8px;              /* TV와 살짝 겹치게 */
-  margin-bottom: 10px;
-}
-.tab {
-  padding: 8px 18px;
-  border-radius: 0 0 18px 18px;
-  background: #1f1f1f;
-  cursor: pointer;
-  font-size: 0.85em;
-  border-top: 2px solid #3b1f12;
-}
-.tab.active {
-  background: #ff4fa3;
-  color: #000;
-  border-top-color: #ff4fa3;
-}
+    /* 책 책등(Spine) 입체 그림자 효과 */
+    .book-cover::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 15px;
+      height: 100%;
+      background: linear-gradient(to right, rgba(0,0,0,0.5), rgba(0,0,0,0));
+    }
 
-/* ===== Info & Controls ===== */
-.now-playing {
-  font-size: 0.95em;
-  color: #bbb;
-  margin: 10px 4px;
-}
-.controls {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-bottom: 22px;
-}
-button {
-  background: #1f1f1f;
-  color: #eee;
-  border: none;
-  padding: 11px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-}
+    /* [★중요] 책 표지 전면 정보 디자인 구역 */
+    .cover-content {
+      width: 100%;
+      height: 100%;
+      padding: 40px 30px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      color: #fff5dc;
+      text-align: center;
+      backface-visibility: hidden; /* 뒤집혔을 때 텍스트가 거꾸로 투출되는 버그 방지 */
+    }
 
-/* ===== Playlist ===== */
-.playlist-wrap {
-  max-height: 45vh;
-  overflow-y: auto;
-}
-.track {
-  padding: 14px;
-  background: #161616;
-  border-radius: 8px;
-  margin-bottom: 8px;
-  cursor: pointer;
-}
-.track.active { background: #3a3a3a; }
-.track span {
-  font-size: 0.8em;
-  color: #aaa;
-}
+    .cover-header {
+      font-size: 0.9rem;
+      letter-spacing: 4px;
+      color: #ae8c57;
+      text-transform: uppercase;
+      font-weight: bold;
+    }
 
-/* ===== Footer ===== */
-.presented-by {
-  margin-top: 24px;
-  text-align: center;
-  font-size: 0.75em;
-  color: #666;
-}
-.presented-by a {
-  color: #888;
-  text-decoration: none;
-}
-.presented-by a:hover {
-  color: #ffb7d5;
-}
-</style>
+    .cover-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 15px;
+    }
+
+    .cover-title {
+      font-size: 2.2rem;
+      font-weight: bold;
+      color: #fff6de;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+      line-height: 1.2;
+    }
+
+    .cover-subtitle {
+      font-size: 1.1rem;
+      color: #ae8c57;
+      font-style: italic;
+      letter-spacing: 1px;
+    }
+
+    .cover-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .cover-divider {
+      width: 60px;
+      height: 1px;
+      background: #ae8c57;
+      margin: 0 auto;
+    }
+
+    .cover-info {
+      font-size: 0.85rem;
+      color: #c9b18c;
+      letter-spacing: 1px;
+      line-height: 1.5;
+    }
+
+    .action-tip {
+      font-size: 0.8rem;
+      color: rgba(255, 245, 220, 0.4);
+      margin-top: 15px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.9; }
+    }
+
+    /* ========================================================
+       📺 시네마틱 비디오 영역 (상단 고정)
+       ======================================================== */
+    .video-section {
+      width: 100%;
+      position: relative;
+      background: #000;
+      padding-top: 56.25%; 
+      border-bottom: 3px solid #52351e;
+      flex-shrink: 0; 
+      z-index: 25;
+    }
+
+    .video-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #player {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* ========================================================
+       👑 대시보드 컨트롤바 (높이 고정)
+       ======================================================== */
+    .control-bar {
+      background: #0b192c;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #52351e;
+      flex-shrink: 0; 
+      z-index: 30;
+      gap: 12px;
+    }
+
+    .mute-btn {
+      background: #3c2415;
+      color: #fff5dc;
+      border: 1px solid #7a532f;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 46px;
+      height: 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .mute-btn:active { background: #23160e; }
+
+    .chapter-select-wrapper {
+      flex: 1;
+    }
+
+    .chapter-select {
+      width: 100%;
+      padding: 10px 14px;
+      background: #1e130c;
+      color: #fff5dc;
+      border: 1px solid #7a532f;
+      border-radius: 6px;
+      font-family: Georgia, serif;
+      font-size: 0.95rem;
+      font-weight: bold;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* ========================================================
+       📜 EBOOK 영역 (페이지 없이 아래로 자유롭게 스크롤)
+       ======================================================== */
+    .ebook {
+      flex: 1; 
+      min-height: 0; 
+      padding: 14px; 
+      background: #2c1e14; 
+      overflow: hidden; 
+    }
+
+    .scroll-container {
+      width: 100%;
+      height: 100%; 
+      background: #fff6de; 
+      border-radius: 12px;
+      padding: 26px 22px; 
+      overflow-y: auto; 
+      box-shadow: inset 0 0 20px rgba(90,58,31,0.2), 0 4px 15px rgba(0,0,0,0.4);
+      -webkit-overflow-scrolling: touch; 
+    }
+
+    .chapter-title {
+      text-align: center;
+      font-size: 1.4rem; 
+      color: #3c2415;
+      margin-bottom: 24px;
+      font-weight: bold;
+      line-height: 1.4;
+      border-bottom: 1px dashed rgba(90,58,31,0.3);
+      padding-bottom: 12px;
+    }
+
+    .chapter-text {
+      font-size: 1.05rem;
+      line-height: 1.9;
+      color: #23160e;
+      white-space: pre-line; 
+      font-weight: 500; 
+      text-align: justify;
+      padding-bottom: 40px; 
+    }
+  </style>
 </head>
-
 <body>
-<div class="container">
 
-<a class="neon-youtube"
-   href="https://www.youtube.com/@lenaparklive"
-   target="_blank">▶ @lenaparklive</a>
-
-<div class="tv">
-  <div class="tv-frame">
-    <div class="tv-screen">
-      <div id="player"></div>
+<div class="app">
+  <!-- 📖 [신규] 3D 인터랙티브 책 표지 레이어 영역 -->
+  <div id="intro-layer" class="intro-layer">
+    <div class="book-cover" onclick="openTheBook()">
+      <!-- 표지 전면 정보 커스텀 스페이스 -->
+      <div class="cover-content">
+        <div class="cover-header">The Interactive Epic</div>
+        
+        <div class="cover-main">
+          <h1 class="cover-title">THE ODYSSEY</h1>
+          <p class="cover-subtitle">By Homer</p>
+        </div>
+        
+        <div class="cover-footer">
+          <div class="cover-divider"></div>
+          <!-- 아래 클래스 내부에 표지에 노출하고 싶으신 텍스트 정보를 적으시면 됩니다 -->
+          <p class="cover-info">
+            TRANSLATED BY SAMUEL BUTLER<br>
+            DIGITAL MULTIMEDIA EDITION
+          </p>
+          <span class="action-tip">▼ TAP TO OPEN BOOK</span>
+        </div>
+      </div>
     </div>
   </div>
+
+  <!-- 상단 가로 16:9 비디오 존 (고정) -->
+  <section class="video-section">
+    <div class="video-container">
+      <div id="player"></div>
+    </div>
+  </section>
+
+  <!-- 컨트롤 가로 대시보드 (고정) -->
+  <section class="control-bar">
+    <button id="mute-btn" class="mute-btn" onclick="toggleMute()">🔊</button>
+    
+    <div class="chapter-select-wrapper">
+      <select id="chapter-select" class="chapter-select" onchange="onDropdownChange(this)"></select>
+    </div>
+  </section>
+
+  <!-- 무한 세로 스크롤 이북 본문 존 -->
+  <section class="ebook">
+    <div class="scroll-container" id="scroll-container">
+      <div class="chapter-title" id="chapter-title"></div>
+      <div class="chapter-text" id="chapter-text"></div>
+    </div>
+  </section>
 </div>
 
-<!-- 탭: TV 바로 아래 -->
-<div class="tabs">
-  <div class="tab active" onclick="switchTab('A', this)">Playlist A</div>
-  <div class="tab" onclick="switchTab('B', this)">Playlist B</div>
-</div>
-
-<div class="now-playing" id="nowPlaying">Now Playing: —</div>
-
-<div class="controls">
-  <button onclick="prevTrack()">◀ Prev</button>
-  <button onclick="nextTrack()">Next ▶</button>
-</div>
-
-<div class="playlist-wrap" id="playlist"></div>
-
-<div class="presented-by">
-ⓒ <a href="https://blog.naver.com/readingstraws" target="_blank">박정현북클럽</a>
-</div>
-
-</div>
+<script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
-/* ===== 플레이리스트 ===== */
-const tracksA = [
-  { title:"White Christmas (Jazz Ver.)", note:"박정현", videoId:"f5V0PpyTXNI", start:95 }
-];
+  /* ========================================================
+     📚 데이터 딕셔너리
+     ======================================================== */
+  const chapters = [
+    {
+      title: "I. The Council of the Gods",
+      youtubeId: "jisnC7cIri0",
+      stopTime: 171, 
+      text: `“Tell me, O Muse, of that ingenious hero who travelled far and wide after he had sacked the famous town of Troy. Many cities did he visit, and many were the nations with whose manners and customs he was acquainted; moreover he suffered much by sea while trying to save his own life and bring his men safely home; but do what he might he could not save his men…” (Butler)
 
-const tracksB = [
-  { title:"(탭 B 전용 영상)", note:"박정현", videoId:"JTU3MAD41_8", start:186 }
-];
+The gods held a council, a meeting, in which the fate of Odysseus was discussed. He had lost every single man from his crew, and was currently held captive by the goddess Calypso, where he wept day and night to return home and see his wife and son.
 
-let activeTracks = tracksA;
-let currentIndex = 0;
-let player;
+Athena, who favored the clever, was a champion of Odysseus, and pleaded with her father Zeus, ruler of the gods, to help Odysseus home: \n\n“ ...my heart bleeds, when I think of his sufferings in that lonely sea- girt island, far away, poor man, from all his friends...” (Butler)
 
-/* ===== YouTube ===== */
-function onYouTubeIframeAPIReady() {
-  player = new YT.Player("player", {
-    videoId: activeTracks[0].videoId,
-    events: {
-      onReady: () => playTrack(0)
+Zeus agreed that Odysseus was a capable man, pleased with his many offerings, but reminded Athena that Poseidon the earth-shaker was still very angry with Odysseus—angry about the Trojans’ defeat, and especially about his son.
+
+After some debate, Athena got permission from her father Zeus to help Odysseus. Losing no time, she went to his home island of Ithaca to inspire Odysseus’ son, Telemachus, into action.
+
+Athena disguised herself as Mentes, king of the Taphians, before she arrived at the house of Odysseus. His house was a grand and sprawling estate, for Odysseus was king and ruler over Ithaca. There she found Telemachus, a young man just grown to adulthood, sitting gloomily amongst a large crowd of men feasting, and playing music and games.`
+    },
+    {
+      title: "II. Telemachus and the Suitors",
+      youtubeId: "ZU_jvT2yTAI", 
+      stopTime: 186, 
+      text: `Spotting the newcomer, Telemachus gave the visitor a warm welcome—preparing a seat in the great hall, setting out a table full of food and wine, as he explained his situation at home.\n\n“I hope, sir, ” said he, "that you will not be offended with what I am going to say. Singing comes cheap to those who do not pay for it, and all this is done at the cost of one whose bones lie rotting in some wilderness or grinding to powder in the surf ... ” (Butler)
+
+The feasting men were the strongest and brightest of Ithaca and surrounding lands, all hoping to win the hand of Penelope the queen, if only she would pick a suitor.\n\nBut Penelope는 여전히 남편에게 충실했고 다른 이를 선택하기를 거부했습니다. 트로이 전쟁으로 떠난 지 벌써 20년이 지났음에도 불구하고 말이죠.
+
+Penelope’s days and nights swung back and forth between clinging to slim hope for her husband’s return, and falling into despair that he might truly be dead.\n\nSo in the meantime, these suitors had overrun the house, eating all their food, drinking all their wine, and slaughtering large quantities of the royal cattle and sheep every day for feasting and sacrifices.
+
+Meanwhile, Telemachus, who was just a baby when Odysseus left, had lost all hope for his father’s return.
+
+“Savages!,” Athena (as Mentes) said of the suitors. “I knew Odysseus well, for our fathers were friends, and the Odysseus I remember would return as a terrible storm of vengeance upon these suitors, for truly, their insult to your house deserves no mercy.
+
+But whether he is to return or not, his fate lies with the gods, of course. But you are no longer a boy; you have inherited the fine features of your father, so you should take action like your father as well.\n\nDon’t sit and suffer. Take a ship and crew, sail out to seek answers about your father’s fate, for better or worse. It is time for your part in the story to be written.”`
+    },
+    {
+      title: "III. Telemachus's Journey",
+      youtubeId: "s8NlPKl3Q54",
+      stopTime: 140, 
+      text: `Telemachus took this advice to heart and secretly set sail to Pylos, the home of King Nestor, who had fought at the battle of Troy alongside Odysseus.
+
+Through Nestor, Telemachus learned about the fates of many key heroes of the Trojan War. However, Nestor did not know what might have happened to Odysseus.
+
+Telemachus next traveled to King Menelaus, husband of Helen, around whom the entire war with Troy began. There, Menelaus recounted the clever genius of Odysseus, for it was his idea to build that wooden horse.
+
+He also described Odysseus's courage and gift for leadership, and all there mourned the absent hero.
+
+Through his own long travels home, Menelaus had met an immortal and ancient being named Proteus, who told him: "Odysseus, who dwells in Ithaca—I can see him in an island, sorrowing bitterly in the house of the nymph Calypso, who is keeping him prisoner; and he cannot reach his home, for he has no ships nor sailors to take him over the sea."
+
+This was the only news he had, but it was hopeful news indeed for Telemachus. As was the custom, he stayed a while as a guest at the house of Menelaus. Meanwhile, back on Ithaca, the suitors learned of Telemachus' journey and began plotting an ambush to kill him on his return trip home.`
+    },
+    {
+      title: "IV. Calypso and Poseidon's Storm",
+      youtubeId: "7c5orkcGTQc",
+      stopTime: 153, 
+      text: `A new day dawned. Zeus sent word to Calypso with orders to set Odysseus free. Calypso wasn't happy but had to follow the will of Zeus or suffer the consequences.
+
+She gave Odysseus tools to build a raft and sail home. Odysseus set sail and was nearing the land of Phaeacia when the earth-shaker, the god Poseidon, spotted the wooden raft upon calm waters.
+
+He could see him sailing upon the sea, and it made him very angry. So he wagged his head and muttered to himself, saying: "Good heavens! So the gods have been changing their minds about Odysseus while I was away. Still, he shall have plenty of hardship yet before he has done with it."
+
+Poseidon gathered together all his clouds, then with his giant trident stirred round and round the waters of the sea until a tremendous storm began to rage.
+
+Odysseus was thrown overboard and struggled long under the water. With his very last ounce of strength, Odysseus raised his head above water and grabbed onto the raft.
+
+Blessed by the favor of Athena and with help from a marine goddess, Odysseus made it safely to the shores of Phaeacia. There, he was discovered by the princess of that land, Nausicaa.
+
+She showed him the way to her palace and instructed Odysseus: "When you come to our court, you'll find the king and queen seated beside each other. My mother the queen will be spinning purple wool. Don't go to my father, but go to my mother first. Bow at her knees and announce yourself. And if you can speak well and please her, she can ensure your welcome by the court and your safe return home, no matter how far it may be."`
+    },
+    {
+      title: "V. The Feast of Phaeacians",
+      youtubeId: "ZkT3T7Damf8",
+      stopTime: 169, 
+      text: `When Odysseus reached the palace where the royal court was gathered, he did just as Nausicaa had advised and fell upon the floor at the foot of the queen. "Queen Arete," he exclaimed, "daughter of great Rhexenor, in my distress I humbly pray you, as also your husband and these your guests whom may heaven prosper with long life and happiness, to help me home to my own country as soon as possible, for I have been long in trouble and away from my friends."
+
+Odysseus was a master speaker. He honored his audience elegantly with high praise, and yet his plea was humble and honest, earning the sympathy of the Phaeacians.
+
+He was not only welcomed but also thrown a feast by the generous King Alcinous. At the feast, a blind poet who performed for the court was called to sing about the famous war at Troy, no one knowing the hero of that song was none other than their new unnamed guest.
+
+Odysseus was overcome with emotion to hear in song his very own experiences—the hushed and restless weight inside the great wooden horse, the feverish rush of their surprise attack on Troy. Just hearing the names of his dear comrades, Menelaus, Achilles, made Odysseus begin to weep uncontrollably.
+
+King Alcinous, hearing his sobs, ordered the singing to stop and urged his guest to finally reveal his identity and share why the story of Troy caused him so much pain: "And now tell me, and tell me true... did you lose some brave kinsman of your wife's when you were before Troy, a son-in-law or father-in-law? Or was it some brave and kindly-natured comrade? For a good friend is as dear to a man as his own brother."`
     }
+  ];
+
+  /* ========================================================
+     ⚙️ 시스템 제어 모듈
+     ======================================================== */
+  let currentChapter = 0;
+  let player;
+  let timeCheckInterval; 
+  let isMuted = false;
+
+  function initDropdown() {
+    const select = document.getElementById("chapter-select");
+    select.innerHTML = "";
+    chapters.forEach((chap, index) => {
+      const opt = document.createElement("option");
+      opt.value = index;
+      opt.innerText = chap.title;
+      select.appendChild(opt);
+    });
+  }
+
+  function renderChapter() {
+    if (!chapters || !chapters[currentChapter]) return;
+
+    const chapter = chapters[currentChapter];
+    document.getElementById("chapter-title").innerText = chapter.title;
+    document.getElementById("chapter-text").innerText = chapter.text;
+
+    document.getElementById("scroll-container").scrollTop = 0;
+    document.getElementById("chapter-select").value = currentChapter;
+  }
+
+  /* 📖 책 표지 펼치기 이벤트 함수 */
+  function openTheBook() {
+    const cover = document.querySelector('.book-cover');
+    const introLayer = document.getElementById('intro-layer');
+    
+    // 3D 회전 클래스 추가
+    cover.classList.add('open');
+    
+    // 표지 회전 연출 시간(1.2초)이 끝난 뒤 뚜껑 제거 및 영상 자동 재생
+    setTimeout(() => {
+      introLayer.classList.add('hidden');
+      
+      // 인트로 오픈과 동시에 첫 번째 유튜브 비디오 자동 재생 연동 트리거
+      if (player && typeof player.playVideo === 'function') {
+        player.playVideo();
+      }
+    }, 1200);
+  }
+
+  function onDropdownChange(selectElement) {
+    const targetIdx = parseInt(selectElement.value, 10);
+    if (targetIdx !== currentChapter) {
+      currentChapter = targetIdx;
+      syncVideoToChapter();
+      renderChapter();
+    }
+  }
+
+  function syncVideoToChapter() {
+    if (player && player.loadVideoById) {
+      player.loadVideoById({
+        videoId: chapters[currentChapter].youtubeId,
+        startSeconds: 0
+      });
+      
+      if (isMuted) {
+        player.mute();
+      } else {
+        player.unMute();
+      }
+    }
+  }
+
+  function toggleMute() {
+    if (!player || typeof player.mute !== 'function') return;
+    
+    const muteBtn = document.getElementById("mute-btn");
+    if (isMuted) {
+      player.unMute();
+      muteBtn.innerText = "🔊";
+      isMuted = false;
+    } else {
+      player.mute();
+      muteBtn.innerText = "🔇";
+      isMuted = true;
+    }
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    initDropdown();
+    renderChapter();
   });
-}
 
-/* ===== 탭 전환 (안정화) ===== */
-function switchTab(tab, el) {
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  el.classList.add("active");
+  window.onYouTubeIframeAPIReady = function() {
+    player = new YT.Player("player", {
+      videoId: chapters[0].youtubeId,
+      playerVars: {
+        'controls': 1,         
+        'modestbranding': 1,
+        'rel': 0,
+        'playsinline': 1,
+        'autoplay': 0 /* 인트로 가림막이 있을 동안은 대기 상태로 유지 */
+      },
+      events: {
+        'onStateChange': onPlayerStateChange
+      }
+    });
+  };
 
-  activeTracks = (tab === "A") ? tracksA : tracksB;
-  currentIndex = 0;
-  loadPlaylist();
-  playTrack(0);
-}
+  function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.PLAYING) { 
+      startTimeMonitor();
+    } else {
+      stopTimeMonitor();
+    }
 
-/* ===== 재생 ===== */
-function playTrack(i) {
-  currentIndex = i;
-  const t = activeTracks[i];
-  player.loadVideoById({
-    videoId: t.videoId,
-    startSeconds: t.start || 0
-  });
-  document.getElementById("nowPlaying").textContent =
-    "Now Playing: " + t.title;
-  updateActive();
-}
+    if (event.data === YT.PlayerState.ENDED) { 
+      if (currentChapter < chapters.length - 1) {
+        currentChapter++;
+        syncVideoToChapter();
+        renderChapter();
+      }
+    }
+  }
 
-function nextTrack() {
-  currentIndex = (currentIndex + 1) % activeTracks.length;
-  playTrack(currentIndex);
-}
-function prevTrack() {
-  currentIndex = (currentIndex - 1 + activeTracks.length) % activeTracks.length;
-  playTrack(currentIndex);
-}
+  function startTimeMonitor() {
+    stopTimeMonitor(); 
+    timeCheckInterval = setInterval(() => {
+      if (player && player.getCurrentTime) {
+        const currentTime = player.getCurrentTime();
+        const maxLimitTime = chapters[currentChapter].stopTime;
+        
+        if (currentTime >= maxLimitTime) {
+          player.pauseVideo();
+          stopTimeMonitor();
+        }
+      }
+    }, 400); 
+  }
 
-/* ===== Playlist UI ===== */
-function loadPlaylist() {
-  const pl = document.getElementById("playlist");
-  pl.innerHTML = "";
-  activeTracks.forEach((t,i)=>{
-    const d = document.createElement("div");
-    d.className = "track";
-    d.innerHTML = `<strong>${t.title}</strong><br><span>${t.note}</span>`;
-    d.onclick = () => playTrack(i);
-    pl.appendChild(d);
-  });
-}
-
-function updateActive() {
-  document.querySelectorAll(".track").forEach((el,i)=>{
-    el.classList.toggle("active", i === currentIndex);
-  });
-}
-
-loadPlaylist();
+  function stopTimeMonitor() {
+    if (timeCheckInterval) {
+      clearInterval(timeCheckInterval);
+    }
+  }
 </script>
 </body>
 </html>
